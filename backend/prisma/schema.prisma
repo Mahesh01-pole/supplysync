@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SUPPLIER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  MATCHED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum Urgency {
+  P1
+  P2
+  P3
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  role          Role
+  name          String
+  phone         String?
+  company       String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  supplier      Supplier?
+  orders        Order[]       @relation("BuyerOrders")
+  notifications Notification[]
+}
+
+model Supplier {
+  id                           String   @id @default(uuid()) @db.Uuid
+  user_id                      String   @unique @db.Uuid
+  user                         User     @relation(fields: [user_id], references: [id])
+  company_name                 String
+  address                      String
+
+  latitude                     Float?
+  longitude                    Float?
+
+  rating                       Decimal  @default(0) @db.Decimal(3, 2)
+  active                       Boolean  @default(true)
+  total_orders_fulfilled       Int      @default(0)
+  avg_fulfillment_time_minutes Int      @default(0)
+  created_at                   DateTime @default(now())
+
+  inventory                    Inventory[]
+  matched_orders               Order[]     @relation("MatchedSupplierOrders")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  category    String?
+  unit        String
+  image_url   String?
+
+  inventory   Inventory[]
+  orders      Order[]
+}
+
+model Inventory {
+  id             String   @id @default(uuid()) @db.Uuid
+  supplier_id    String   @db.Uuid
+  supplier       Supplier @relation(fields: [supplier_id], references: [id])
+  product_id     String   @db.Uuid
+  product        Product  @relation(fields: [product_id], references: [id])
+  quantity       Int      @default(0)
+  price_per_unit Decimal
+
+  updated_at     DateTime @updatedAt
+
+  @@unique([supplier_id, product_id])
+}
+
+model Order {
+  id                         String   @id @default(uuid()) @db.Uuid
+  order_number               String   @unique
+  buyer_id                   String   @db.Uuid
+  buyer                      User     @relation("BuyerOrders", fields: [buyer_id], references: [id])
+  product_id                 String   @db.Uuid
+  product                    Product  @relation(fields: [product_id], references: [id])
+  quantity                   Int
+  delivery_address           String
+
+  delivery_lat               Float?
+  delivery_lng               Float?
+
+  urgency                    Urgency
+  status                     OrderStatus @default(PENDING)
+
+  matched_supplier_id        String?  @db.Uuid
+  matched_supplier           Supplier? @relation("MatchedSupplierOrders", fields: [matched_supplier_id], references: [id])
+  match_score                Decimal?
+  estimated_delivery_minutes Int?
+
+  route_polyline             Json?
+
+  created_at                 DateTime @default(now())
+  matched_at                 DateTime?
+  dispatched_at              DateTime?
+  delivered_at               DateTime?
+
+  order_events               OrderEvent[]
+  tracking                   DeliveryTracking?
+}
+
+model OrderEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  order_id    String   @db.Uuid
+  order       Order    @relation(fields: [order_id], references: [id])
+  event_type  String
+  description String?
+  latitude    Float?
+  longitude   Float?
+  timestamp   DateTime @default(now())
+}
+
+model DeliveryTracking {
+  id             String   @id @default(uuid()) @db.Uuid
+  order_id       String   @unique @db.Uuid
+  order          Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  rider_lat      Float?
+  rider_lng      Float?
+  speed_kmh      Decimal?
+  heading        Decimal?
+
+  driver_name    String?
+  driver_phone   String?
+  driver_rating  Decimal? @db.Decimal(3, 2)
+
+  timestamp      DateTime @default(now())
+  updated_at     DateTime @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  user       User     @relation(fields: [user_id], references: [id])
+  type       String
+  title      String
+  message    String?
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+}
