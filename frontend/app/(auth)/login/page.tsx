@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import { Package, Eye, EyeOff, Loader2 } from "lucide-react";
 import Cookies from "js-cookie";
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -21,7 +21,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Call real backend API for authentication
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
@@ -37,8 +36,7 @@ export default function LoginPage() {
       const data = await response.json();
       const { token, user } = data;
 
-      // Store JWT token and user info in cookies
-      Cookies.set('token', token, { expires: 1 }); // Expires in 1 day
+      Cookies.set('token', token, { expires: 1 });
       Cookies.set('userId', user.id, { expires: 1 });
       Cookies.set('userName', user.name, { expires: 1 });
       Cookies.set('userRole', user.role, { expires: 1 });
@@ -59,7 +57,6 @@ export default function LoginPage() {
         iconTheme: { primary: '#6366f1', secondary: '#fff' },
       });
 
-      // Redirect based on user role
       const from = searchParams.get('from');
       const destination =
         from ??
@@ -84,7 +81,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      {/* Background glow */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-3xl" />
       </div>
@@ -95,7 +91,6 @@ export default function LoginPage() {
         transition={{ duration: 0.4 }}
         className="sm:mx-auto sm:w-full sm:max-w-md"
       >
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="h-14 w-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shadow-xl">
             <Package className="h-7 w-7 text-indigo-400" />
@@ -120,7 +115,6 @@ export default function LoginPage() {
       >
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-8 px-6 shadow-2xl">
           <form className="space-y-5" onSubmit={handleLogin}>
-            {/* Email */}
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300">
                 Email address
@@ -136,7 +130,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300">
                 Password
@@ -161,12 +154,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Hint */}
             <p className="text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 border border-white/5">
               💡 Test Accounts: <span className="text-slate-300">admin@supplysync.com</span> (Admin) or <span className="text-slate-300">buyer@supplysync.com</span> (Buyer). Password: <span className="text-slate-300">password123</span>
             </p>
 
-            {/* Submit */}
             <button
               id="login-submit"
               type="submit"
@@ -186,5 +177,13 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginPage />
+    </Suspense>
   );
 }
