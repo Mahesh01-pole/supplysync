@@ -10,6 +10,7 @@
     "prisma:push": "prisma db push"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "5.11.0",
     "@types/bcryptjs": "^2.4.6",
@@ -17,18 +18,28 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.0",
+    "groq-sdk": "^1.1.2",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
+    "pdf-lib": "^1.17.1",
+    "razorpay": "^2.9.6",
+    "redis": "^5.12.1",
+    "resend": "^6.12.3",
+    "twilio": "^6.0.0",
     "winston": "^3.12.0",
     "ws": "^8.16.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.19.39",
     "@types/ws": "^8.5.10",
+    "faker": "^6.6.6",
     "prisma": "5.11.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.3"
   },

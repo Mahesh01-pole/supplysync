@@ -1,5 +1,9 @@
-node_modules/ 
-.env 
-.next/ 
-.antigravity/ 
-"frontend/.env.local" 
+node_modules/
+.env
+.env.local
+frontend/.env.local
+backend/.env
+.next/
+.antigravity/
+backend/dist/
+*.tsbuildinfo

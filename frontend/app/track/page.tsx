@@ -18,7 +18,7 @@ export default function TrackIndexPage() {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center"
@@ -26,10 +26,12 @@ export default function TrackIndexPage() {
         <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
           <Map className="w-8 h-8 text-primary" />
         </div>
-        
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Track Your Delivery</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          Track Your Delivery
+        </h1>
         <p className="text-slate-500 mb-8">
-          Enter your Order ID or Tracking Number to get real-time location updates.
+          Enter your Order ID or Tracking Number to get real-time location
+          updates.
         </p>
 
         <form onSubmit={handleSearch} className="space-y-4">
@@ -46,7 +48,6 @@ export default function TrackIndexPage() {
               required
             />
           </div>
-          
           <button
             type="submit"
             disabled={!trackingId.trim()}

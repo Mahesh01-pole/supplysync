@@ -1,11 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle2 } from 'lucide-react';
+import { useState } from "react";
+import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', company: '', message: '' });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    company: "",
+    message: "",
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,11 +27,14 @@ export default function ContactPage() {
             <Mail className="h-4 w-4" /> Contact Sales
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Let&apos;s talk{' '}
-            <span className="bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">supply chain</span>
+            Let&apos;s talk{" "}
+            <span className="bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
+              supply chain
+            </span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Our team typically responds within 2 business hours. Fill in the form and we&apos;ll be in touch.
+            Our team typically responds within 2 business hours. Fill in the
+            form and we&apos;ll be in touch.
           </p>
         </div>
       </section>
@@ -39,21 +47,28 @@ export default function ContactPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Get in touch</h2>
               <p className="text-muted-foreground leading-relaxed">
-                Whether you&apos;re ready to get started, need a live demo, or just have questions — we&apos;re here to help.
+                Whether you&apos;re ready to get started, need a live demo, or
+                just have questions — we&apos;re here to help.
               </p>
             </div>
             <div className="space-y-5">
               {[
-                { icon: Mail, label: 'Email', value: 'sales@supplysync.io' },
-                { icon: Phone, label: 'Phone', value: '+1 (800) 555-SYNC' },
-                { icon: MapPin, label: 'HQ', value: 'Navi Mumbai ,CA · Remote-first' },
+                { icon: Mail, label: "Email", value: "sales@supplysync.io" },
+                { icon: Phone, label: "Phone", value: "+1 (800) 555-SYNC" },
+                {
+                  icon: MapPin,
+                  label: "HQ",
+                  value: "Navi Mumbai ,CA · Remote-first",
+                },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {label}
+                    </p>
                     <p className="font-medium">{value}</p>
                   </div>
                 </div>
@@ -67,32 +82,55 @@ export default function ContactPage() {
               <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-8">
                 <CheckCircle2 className="h-14 w-14 text-green-500" />
                 <h3 className="text-xl font-semibold">Message Sent!</h3>
-                <p className="text-muted-foreground text-sm">Our sales team will reach out within 2 business hours.</p>
+                <p className="text-muted-foreground text-sm">
+                  Our sales team will reach out within 2 business hours.
+                </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
-                {(['name', 'email', 'company'] as const).map((field) => (
+                {(["name", "email", "company"] as const).map((field) => (
                   <div key={field} className="space-y-1.5">
-                    <label htmlFor={field} className="text-sm font-medium capitalize">{field === 'name' ? 'Full Name' : field === 'email' ? 'Work Email' : 'Company'}</label>
+                    <label
+                      htmlFor={field}
+                      className="text-sm font-medium capitalize"
+                    >
+                      {field === "name"
+                        ? "Full Name"
+                        : field === "email"
+                          ? "Work Email"
+                          : "Company"}
+                    </label>
                     <input
                       id={field}
-                      type={field === 'email' ? 'email' : 'text'}
+                      type={field === "email" ? "email" : "text"}
                       required
                       value={form[field]}
-                      onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, [field]: e.target.value }))
+                      }
                       className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
-                      placeholder={field === 'name' ? 'Jane Smith' : field === 'email' ? 'jane@company.com' : 'Acme Inc.'}
+                      placeholder={
+                        field === "name"
+                          ? "Jane Smith"
+                          : field === "email"
+                            ? "jane@company.com"
+                            : "Acme Inc."
+                      }
                     />
                   </div>
                 ))}
                 <div className="space-y-1.5">
-                  <label htmlFor="message" className="text-sm font-medium">Message</label>
+                  <label htmlFor="message" className="text-sm font-medium">
+                    Message
+                  </label>
                   <textarea
                     id="message"
                     rows={4}
                     required
                     value={form.message}
-                    onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, message: e.target.value }))
+                    }
                     className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40 transition resize-none"
                     placeholder="Tell us about your supply chain challenges…"
                   />

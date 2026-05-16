@@ -14,7 +14,7 @@ import productsRoutes from './routes/products';
 import { setupWebSocket } from './websocket/ws-server';
 
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 8081;
 
 app.use(cors());
 app.use(express.json());

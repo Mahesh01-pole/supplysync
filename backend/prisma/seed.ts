@@ -183,10 +183,11 @@ async function main() {
     if ((i + 1) % 10 === 0) console.log(`✅ Seeded ${i + 1}/30 suppliers`);
   }
 
-  // Create supplier@test.com pointing to first supplier
-  await prisma.user.upsert({
+  // Create supplier@test.com pointing to a dedicated supplier profile
+  // (upsert avoids duplicate errors if re-seeding)
+  const testSupplierUser = await prisma.user.upsert({
     where: { email: 'supplier@test.com' },
-    update: {},
+    update: { password_hash: testPw },
     create: {
       email: 'supplier@test.com',
       password_hash: testPw,
@@ -194,20 +195,39 @@ async function main() {
       name: 'Demo Supplier',
       company: supplierData[0].name,
       phone: '9820009999',
-      supplier: {
-        create: {
-          company_name: supplierData[0].name + ' (Test)',
-          address: supplierData[0].address,
-          latitude: supplierData[0].lat,
-          longitude: supplierData[0].lng,
-          rating: 4.5,
-          active: true,
-          total_orders_fulfilled: 50,
-          avg_fulfillment_time_minutes: 35,
-        },
-      },
     },
   });
+
+  // Create / find its Supplier record
+  let testSupplierRecord = await prisma.supplier.findFirst({ where: { user_id: testSupplierUser.id } });
+  if (!testSupplierRecord) {
+    testSupplierRecord = await prisma.supplier.create({
+      data: {
+        user_id: testSupplierUser.id,
+        company_name: supplierData[0].name + ' (Test)',
+        address: supplierData[0].address,
+        latitude: supplierData[0].lat,
+        longitude: supplierData[0].lng,
+        rating: 4.5,
+        active: true,
+        total_orders_fulfilled: 50,
+        avg_fulfillment_time_minutes: 35,
+      },
+    });
+    // Give the test supplier inventory for all products
+    for (const p of productData) {
+      await prisma.inventory.create({
+        data: {
+          supplier_id: testSupplierRecord.id,
+          product_id: p.id,
+          quantity: 200,
+          price_per_unit: priceMap[p.id] ?? 1000,
+        },
+      });
+    }
+  }
+  // Add test supplier to the rotation so it receives orders
+  createdSuppliers.push({ id: testSupplierRecord.id, lat: supplierData[0].lat, lng: supplierData[0].lng });
   console.log('✅ supplier@test.com / Test@1234 ready');
 
   // ── 50 orders in various statuses ────────────────────────────────────────────
@@ -305,6 +325,44 @@ async function main() {
     }
   }
   console.log('✅ 50 orders seeded (first 5 are IN_TRANSIT → picked up by WebSocket simulator)');
+
+  // ── 5 guaranteed MATCHED orders for supplier@test.com (visible on dashboard) ─
+  const testOrderUrgencies = ['P1', 'P2', 'P3', 'P1', 'P2'] as const;
+  const testOrderProducts = productData.slice(0, 5);
+  const testOrderAddresses = addresses.slice(0, 5);
+
+  for (let j = 1; j <= 5; j++) {
+    const urgency = testOrderUrgencies[j - 1];
+    const loc = testOrderAddresses[j - 1];
+    const product = testOrderProducts[j - 1];
+    const createdAt = new Date(now.getTime() - j * 3600000); // 1-5 hrs ago
+
+    const testOrder = await prisma.order.create({
+      data: {
+        order_number: `ORD-TEST-${String(j).padStart(4, '0')}`,
+        buyer_id: buyer.id,
+        product_id: product.id,
+        quantity: 20 + j * 5,
+        delivery_address: loc.addr,
+        delivery_lat: loc.lat,
+        delivery_lng: loc.lng,
+        urgency,
+        status: 'MATCHED',
+        matched_supplier_id: testSupplierRecord.id,
+        match_score: 85 + j,
+        estimated_delivery_minutes: urgency === 'P1' ? 25 : urgency === 'P2' ? 40 : 60,
+        created_at: createdAt,
+        matched_at: new Date(createdAt.getTime() + 60000),
+      },
+    });
+    await prisma.orderEvent.create({
+      data: { order_id: testOrder.id, event_type: 'CREATED', description: 'Order placed by buyer', timestamp: createdAt },
+    });
+    await prisma.orderEvent.create({
+      data: { order_id: testOrder.id, event_type: 'MATCHED', description: 'Matched to test supplier', timestamp: new Date(createdAt.getTime() + 60000) },
+    });
+  }
+  console.log('✅ 5 MATCHED orders assigned to supplier@test.com');
 
   console.log('\n🎉 Seeding Complete!');
   console.log('──────────────────────────────────────────');

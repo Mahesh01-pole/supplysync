@@ -21,60 +21,63 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
       const response = await fetch(`${apiUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Authentication failed');
+        throw new Error(error.error || "Authentication failed");
       }
 
       const data = await response.json();
       const { token, user } = data;
 
-      Cookies.set('token', token, { expires: 1 });
-      Cookies.set('userId', user.id, { expires: 1 });
-      Cookies.set('userName', user.name, { expires: 1 });
-      Cookies.set('userRole', user.role, { expires: 1 });
+      Cookies.set("token", token, { expires: 1 });
+      Cookies.set("userId", user.id, { expires: 1 });
+      Cookies.set("userName", user.name, { expires: 1 });
+      Cookies.set("userRole", user.role, { expires: 1 });
       if (user.supplierId) {
-        Cookies.set('supplierId', user.supplierId, { expires: 1 });
+        Cookies.set("supplierId", user.supplierId, { expires: 1 });
       }
 
-      toast.success(`Welcome back, ${user.name}!`, {
+      toast.dismiss();
+      toast.success(`Welcome back, ${user.name}! 👋`, {
         duration: 3000,
         style: {
-          background: '#0f172a',
-          color: '#f8fafc',
-          border: '1px solid rgba(99,102,241,0.4)',
-          borderRadius: '12px',
-          padding: '12px 16px',
-          fontWeight: '500',
+          background: "#0f172a",
+          color: "#f8fafc",
+          border: "1px solid rgba(99,102,241,0.4)",
+          borderRadius: "12px",
+          padding: "12px 16px",
+          fontWeight: "500",
         },
-        iconTheme: { primary: '#6366f1', secondary: '#fff' },
+        iconTheme: { primary: "#6366f1", secondary: "#fff" },
       });
 
-      const from = searchParams.get('from');
+      const from = searchParams.get("from");
       const destination =
         from ??
-        (user.role === 'ADMIN'
-          ? '/admin/dashboard'
-          : user.role === 'SUPPLIER'
-          ? '/supplier/dashboard'
-          : '/dashboard');
+        (user.role === "ADMIN"
+          ? "/admin/dashboard"
+          : user.role === "SUPPLIER"
+            ? "/supplier/dashboard"
+            : "/dashboard");
 
       router.push(destination);
     } catch (error) {
       setIsLoading(false);
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       toast.error(
-        error instanceof Error ? error.message : 'Invalid credentials. Please try again.',
+        error instanceof Error
+          ? error.message
+          : "Invalid email or password. Please try again.",
         {
-          style: { borderRadius: '12px' },
-        }
+          style: { borderRadius: "12px" },
+        },
       );
     }
   };
@@ -100,8 +103,11 @@ function LoginPage() {
           Sign in to SupplySync
         </h1>
         <p className="mt-2 text-center text-sm text-slate-400">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors">
+          Don&apos;t have an account?{""}
+          <Link
+            href="/register"
+            className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
             Register your organisation
           </Link>
         </p>
@@ -113,7 +119,7 @@ function LoginPage() {
         transition={{ delay: 0.15, duration: 0.4 }}
         className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"
       >
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-8 px-6 shadow-2xl">
+        <div className="bg-slate-900/80 backdrop-blur border border-white/10 rounded-2xl py-8 px-6 shadow-2xl">
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300">
@@ -125,7 +131,7 @@ function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
                 placeholder="admin@test.com"
               />
             </div>
@@ -141,7 +147,7 @@ function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 pr-11 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
+                  className="w-full px-4 py-2.5 pr-11 rounded-xl bg-slate-800 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition"
                   placeholder="••••••••"
                 />
                 <button
@@ -154,8 +160,15 @@ function LoginPage() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-500 bg-white/5 rounded-lg px-3 py-2 border border-white/5">
-              💡 Test Accounts: <span className="text-slate-300">admin@supplysync.com</span> (Admin) or <span className="text-slate-300">buyer@supplysync.com</span> (Buyer). Password: <span className="text-slate-300">password123</span>
+            <p className="text-xs text-slate-400 bg-slate-800/60 rounded-lg px-3 py-2 border border-white/10">
+              💡 Test Accounts:{" "}
+              <span className="text-slate-300">buyer@test.com</span>{" "}
+              (Buyer),{" "}
+              <span className="text-slate-300">supplier@test.com</span>{" "}
+              (Supplier),{" "}
+              <span className="text-slate-300">admin@test.com</span>{" "}
+              (Admin). Password:{" "}
+              <span className="text-slate-300">Test@1234</span>
             </p>
 
             <button

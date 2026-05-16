@@ -1,14 +1,37 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import mapboxgl from "mapbox-gl";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, AlertCircle, CheckCircle2, Truck, Star, ChevronDown, Loader2 } from "lucide-react";
+import {
+  MapPin,
+  AlertCircle,
+  CheckCircle2,
+  Truck,
+  Star,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import GeocoderInput from "@/components/maps/GeocoderInput";
+import { usePageTitle } from "@/lib/usePageTitle";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// SSR-safe dynamic import of the map component
+const SupplierMatchMap = dynamic(
+  () => import("@/components/maps/SupplierMatchMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full min-h-[400px] bg-slate-100 rounded-xl flex items-center justify-center">
+        <Loader2 className="animate-spin text-slate-400" size={28} />
+      </div>
+    ),
+  }
+);
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
 interface Product {
   id: string;
@@ -25,15 +48,16 @@ interface MatchedSupplier {
   eta: string;
   score: number;
   price: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export default function NewOrderPage() {
+  usePageTitle("New Order", "SupplySync Buyer");
   const router = useRouter();
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [lng] = useState(72.8777);
-  const [lat] = useState(19.076);
-  const [zoom] = useState(11);
+  const [lat, setLat] = useState(19.076);
+  const [lng, setLng] = useState(72.8777);
+  const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
 
   const [step, setStep] = useState(1);
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,7 +67,8 @@ export default function NewOrderPage() {
   const [address, setAddress] = useState("");
 
   const [isMatching, setIsMatching] = useState(false);
-  const [matchedSupplier, setMatchedSupplier] = useState<MatchedSupplier | null>(null);
+  const [matchedSupplier, setMatchedSupplier] =
+    useState<MatchedSupplier | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Fetch product list
@@ -54,27 +79,16 @@ export default function NewOrderPage() {
       .catch(() => toast.error("Could not load products"));
   }, []);
 
-  // Initialize Map
-  useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token || map.current || !mapContainer.current) return;
-    mapboxgl.accessToken = token;
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [lng, lat],
-        zoom,
-      });
-      new mapboxgl.Marker({ color: "#ea4335" }).setLngLat([lng, lat]).addTo(map.current);
-    } catch (e) {
-      console.warn("Mapbox initialization failed. Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local");
-    }
-  }, [lng, lat, zoom]);
+  const handleAddressSelect = (addr: string, selLat: number, selLng: number) => {
+    setAddress(addr);
+    setLat(selLat);
+    setLng(selLng);
+    setIsLocationConfirmed(true);
+  };
 
   const handleMatch = async () => {
-    if (!selectedProductId || !address) {
-      toast.error("Please select a product and enter a delivery address.");
+    if (!selectedProductId || !address || !isLocationConfirmed) {
+      toast.error("Please select a product and pick a delivery address from the suggestions.");
       return;
     }
     setIsMatching(true);
@@ -84,10 +98,15 @@ export default function NewOrderPage() {
       const res = await fetch(`${API_URL}/api/match`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: selectedProductId, lat, lng, urgency }),
+        body: JSON.stringify({
+          product_id: selectedProductId,
+          lat,
+          lng,
+          urgency,
+        }),
       });
 
-      if (!res.ok) throw new Error("No supplier found for your criteria.");
+      if (!res.ok) throw new Error("No suppliers available nearby. Try a different location.");
 
       const matchData = await res.json();
       setMatchedSupplier({
@@ -98,18 +117,14 @@ export default function NewOrderPage() {
         eta: matchData.eta,
         score: matchData.score,
         price: matchData.price,
+        latitude: matchData.latitude,
+        longitude: matchData.longitude,
       });
+      toast.success(`Supplier matched! ${matchData.name} will fulfill your order.`);
     } catch (err: any) {
-      toast.error("Match engine: " + (err.message || "Unknown error"));
-      // Graceful UI fallback — still show a result card so the demo keeps going
-      setMatchedSupplier({
-        name: "Acme Industrial Pipes & Valves",
-        rating: "4.8",
-        distance: "12.4 km",
-        eta: "45 mins",
-        score: 92,
-        price: String(qty * 1450),
-      });
+      toast.error(err.message || "No suppliers available nearby. Try a different location.");
+      setMatchedSupplier(null);
+      setStep(1);
     } finally {
       setIsMatching(false);
     }
@@ -145,21 +160,28 @@ export default function NewOrderPage() {
         }),
       });
 
+      const resData = await res.json();
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to place order");
+        throw new Error(resData.error || "Failed to place order. Please try again.");
       }
-
-      toast.success("Order placed successfully!");
+      
+      const orderNum = resData.order_number || "ORD-XXXX";
+      toast.success(`Order #${orderNum} placed! Finding your supplier... 🚀`);
       router.push("/dashboard");
     } catch (err: any) {
-      toast.error("Failed to confirm order: " + err.message);
+      toast.error(err.message || "Failed to place order. Please try again.");
     } finally {
       setIsConfirming(false);
     }
   };
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
+
+  // Supplier location for map — fallback to Mumbai if not available
+  const supplierLoc: [number, number] = matchedSupplier?.latitude && matchedSupplier?.longitude
+    ? [matchedSupplier.latitude, matchedSupplier.longitude]
+    : [19.12, 72.85];
+  const buyerLoc: [number, number] = [lat, lng];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -198,10 +220,15 @@ export default function NewOrderPage() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" size={16} />
+                    <ChevronDown
+                      className="absolute right-3 top-2.5 text-slate-400 pointer-events-none"
+                      size={16}
+                    />
                   </div>
                   {selectedProduct && (
-                    <p className="text-xs text-slate-500 mt-1">Unit: {selectedProduct.unit}</p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Unit: {selectedProduct.unit}
+                    </p>
                   )}
                 </div>
 
@@ -221,18 +248,44 @@ export default function NewOrderPage() {
 
                 {/* Urgency */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Delivery Urgency</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Delivery Urgency
+                  </label>
                   <div className="space-y-2">
                     {[
-                      { val: "P1", label: "P1 – Critical", desc: "Asset down, immediate dispatch required.", dot: "bg-red-600 animate-pulse", border: "border-red-500 bg-red-50" },
-                      { val: "P2", label: "P2 – Urgent", desc: "Asset degraded, need parts within hours.", dot: "bg-amber-500", border: "border-amber-500 bg-amber-50" },
-                      { val: "P3", label: "P3 – Standard", desc: "Standard restocking, normal SLAs apply.", dot: "bg-slate-500", border: "border-slate-500 bg-slate-100" },
+                      {
+                        val: "P1",
+                        label: "P1 – Critical",
+                        desc: "Asset down, immediate dispatch required.",
+                        dot: "bg-red-600 animate-pulse",
+                        border: "border-red-500 bg-red-50",
+                      },
+                      {
+                        val: "P2",
+                        label: "P2 – Urgent",
+                        desc: "Asset degraded, need parts within hours.",
+                        dot: "bg-amber-500",
+                        border: "border-amber-500 bg-amber-50",
+                      },
+                      {
+                        val: "P3",
+                        label: "P3 – Standard",
+                        desc: "Standard restocking, normal SLAs apply.",
+                        dot: "bg-slate-500",
+                        border: "border-slate-500 bg-slate-100",
+                      },
                     ].map((opt) => (
                       <label
                         key={opt.val}
                         className={`flex items-center p-3 border rounded-md cursor-pointer transition ${urgency === opt.val ? opt.border : "border-slate-200 hover:bg-slate-50"}`}
                       >
-                        <input type="radio" name="urgency" checked={urgency === opt.val} onChange={() => setUrgency(opt.val)} className="hidden" />
+                        <input
+                          type="radio"
+                          name="urgency"
+                          checked={urgency === opt.val}
+                          onChange={() => setUrgency(opt.val)}
+                          className="hidden"
+                        />
                         <div className={`w-3 h-3 rounded-full ${opt.dot} mr-3`} />
                         <div>
                           <p className="text-sm font-bold text-slate-900">{opt.label}</p>
@@ -243,26 +296,28 @@ export default function NewOrderPage() {
                   </div>
                 </div>
 
-                {/* Address */}
+                {/* Address — Nominatim Geocoder */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Delivery Address <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                    <input
-                      type="text"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="pl-10 w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-                      placeholder="e.g. Tata Motors, Pimpri, Pune"
-                    />
-                  </div>
+                  <GeocoderInput
+                    onSelect={handleAddressSelect}
+                    onQueryChange={() => setIsLocationConfirmed(false)}
+                    placeholder="Search delivery location in India…"
+                    value={address}
+                  />
+                  {address && isLocationConfirmed && (
+                    <p className="text-xs text-teal-600 mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-teal-500 rounded-full inline-block" />
+                      Location pinned on map
+                    </p>
+                  )}
                 </div>
 
                 <button
                   onClick={handleMatch}
-                  disabled={!selectedProductId || !address}
+                  disabled={!selectedProductId || !address || !isLocationConfirmed}
                   className="w-full mt-4 flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Find Best Supplier
@@ -302,7 +357,9 @@ export default function NewOrderPage() {
                   <CheckCircle2 className="text-teal-600 flex-shrink-0" size={24} />
                   <div>
                     <h4 className="text-teal-900 font-bold">Match Found!</h4>
-                    <p className="text-teal-700 text-sm">Best supplier located based on your {urgency} priority.</p>
+                    <p className="text-teal-700 text-sm">
+                      Best supplier located based on your {urgency} priority.
+                    </p>
                   </div>
                 </div>
 
@@ -317,7 +374,9 @@ export default function NewOrderPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Match Score</div>
+                      <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">
+                        Match Score
+                      </div>
                       <div className="text-2xl font-black text-primary">{matchedSupplier.score}%</div>
                     </div>
                   </div>
@@ -331,7 +390,9 @@ export default function NewOrderPage() {
                     </div>
                     <div>
                       <p className="text-xs text-slate-500">Total Price (est.)</p>
-                      <p className="font-bold text-slate-900 mt-1">₹{Number(matchedSupplier.price).toLocaleString()}</p>
+                      <p className="font-bold text-slate-900 mt-1">
+                        ₹{Number(matchedSupplier.price).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -358,23 +419,23 @@ export default function NewOrderPage() {
         </div>
 
         {/* Map Panel */}
-        <div className="bg-slate-200 rounded-xl overflow-hidden min-h-[400px] border border-slate-200 relative">
-          <div ref={mapContainer} className="absolute inset-0" />
-          {!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
-              <div className="text-center text-slate-500 p-6">
-                <MapPin size={32} className="mx-auto mb-2 text-slate-400" />
-                <p className="text-sm font-medium">Map unavailable</p>
-                <p className="text-xs mt-1">Set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local</p>
-              </div>
-            </div>
-          )}
-          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
-            <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-3">
-              <MapPin className="text-red-500" />
+        <div className="min-h-[400px] rounded-xl overflow-hidden border border-slate-200 relative">
+          <SupplierMatchMap
+            buyerLocation={buyerLoc}
+            supplierLocation={supplierLoc}
+            supplierName={matchedSupplier?.name ?? "Your Location"}
+            height="100%"
+            dark={false}
+          />
+          {/* Address overlay */}
+          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/40 to-transparent pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-3">
+              <MapPin className="text-primary" size={18} />
               <div>
                 <p className="text-xs font-bold text-slate-500 uppercase">Delivery Location</p>
-                <p className="text-sm font-medium text-slate-900 truncate">{address || "Enter address above"}</p>
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {address || "Search an address above"}
+                </p>
               </div>
             </div>
           </div>

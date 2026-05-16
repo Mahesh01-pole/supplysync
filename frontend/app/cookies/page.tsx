@@ -1,31 +1,35 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Cookie, CheckCircle2 } from 'lucide-react';
+import { useState } from "react";
+import { Cookie, CheckCircle2 } from "lucide-react";
 
 const cookieTypes = [
   {
-    id: 'essential',
-    label: 'Essential Cookies',
-    description: 'Required for the platform to function correctly. These cannot be disabled.',
+    id: "essential",
+    label: "Essential Cookies",
+    description:
+      "Required for the platform to function correctly. These cannot be disabled.",
     forced: true,
   },
   {
-    id: 'analytics',
-    label: 'Analytics Cookies',
-    description: 'Help us understand how visitors interact with our platform so we can improve it.',
+    id: "analytics",
+    label: "Analytics Cookies",
+    description:
+      "Help us understand how visitors interact with our platform so we can improve it.",
     forced: false,
   },
   {
-    id: 'marketing',
-    label: 'Marketing Cookies',
-    description: 'Used to deliver personalised advertisements and track the effectiveness of our campaigns.',
+    id: "marketing",
+    label: "Marketing Cookies",
+    description:
+      "Used to deliver personalised advertisements and track the effectiveness of our campaigns.",
     forced: false,
   },
   {
-    id: 'preferences',
-    label: 'Preference Cookies',
-    description: 'Remember your settings and preferences to provide a personalised experience.',
+    id: "preferences",
+    label: "Preference Cookies",
+    description:
+      "Remember your settings and preferences to provide a personalised experience.",
     forced: false,
   },
 ];
@@ -58,7 +62,8 @@ export default function CookiesPage() {
           </div>
           <h1 className="text-4xl font-bold tracking-tight">Cookie Settings</h1>
           <p className="text-muted-foreground leading-relaxed">
-            Manage how SupplySync uses cookies on your device. Your preferences are saved locally and respected across all sessions.
+            Manage how SupplySync uses cookies on your device. Your preferences
+            are saved locally and respected across all sessions.
           </p>
         </div>
       </section>
@@ -73,7 +78,9 @@ export default function CookiesPage() {
             >
               <div className="space-y-1 flex-1">
                 <p className="font-semibold">{label}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {description}
+                </p>
               </div>
               <button
                 id={`toggle-${id}`}
@@ -82,12 +89,12 @@ export default function CookiesPage() {
                 onClick={() => !forced && toggle(id)}
                 disabled={forced}
                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                  prefs[id] ? 'bg-primary' : 'bg-muted-foreground/30'
-                } ${forced ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                  prefs[id] ? "bg-primary" : "bg-muted-foreground/30"
+                } ${forced ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                    prefs[id] ? 'translate-x-6' : 'translate-x-1'
+                    prefs[id] ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>
@@ -103,7 +110,7 @@ export default function CookiesPage() {
               Save Preferences
             </button>
             {saved && (
-              <span className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 animate-in fade-in duration-300">
+              <span className="flex items-center gap-1.5 text-sm text-green-600 animate-in fade-in duration-300">
                 <CheckCircle2 className="h-4 w-4" /> Preferences saved
               </span>
             )}

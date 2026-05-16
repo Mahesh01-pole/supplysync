@@ -1,60 +1,67 @@
 "use client";
 
-import Link from 'next/link';
-import { Package, Bell, Map, LayoutDashboard, Box, LogIn, LogOut, UserCircle } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Cookies from 'js-cookie';
-import toast from 'react-hot-toast';
+import Link from "next/link";
+import {
+  Package,
+  Bell,
+  Map,
+  LayoutDashboard,
+  Box,
+  LogIn,
+  LogOut,
+  UserCircle,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
+import toast from "react-hot-toast";
 
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState("");
 
   useEffect(() => {
-    const token = Cookies.get('auth_token');
-    const userRole = Cookies.get('auth_role') ?? '';
+    const token = Cookies.get("token");
+    const userRole = Cookies.get("userRole") ?? "";
     setIsLoggedIn(!!token);
     setRole(userRole);
   }, [pathname]); // re-check on every route change
 
   const handleLogout = () => {
-    Cookies.remove('auth_token');
-    Cookies.remove('auth_role');
-    Cookies.remove('auth_name');
+    Cookies.remove("token");
+    Cookies.remove("userRole");
+    Cookies.remove("userName");
+    Cookies.remove("userId");
+    Cookies.remove("supplierId");
     setIsLoggedIn(false);
-    toast.success('Signed out successfully.', {
-      style: {
-        background: '#0f172a',
-        color: '#f8fafc',
-        border: '1px solid rgba(239,68,68,0.3)',
-        borderRadius: '12px',
-      },
-      iconTheme: { primary: '#ef4444', secondary: '#fff' },
-    });
-    router.push('/login');
+    toast.dismiss();
+    toast.success("Signed out successfully.");
+    router.push("/login");
   };
 
   const dashboardHref =
-    role === 'admin'
-      ? '/admin/dashboard'
-      : role === 'supplier'
-      ? '/supplier/dashboard'
-      : '/dashboard';
+    role === "ADMIN"
+      ? "/admin/dashboard"
+      : role === "SUPPLIER"
+        ? "/supplier/dashboard"
+        : "/dashboard";
 
   const navItems = [
-    { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { label: 'Orders', href: '/orders', icon: Box },
-    { label: 'Tracking', href: '/track', icon: Map },
+    { label: "Dashboard", href: "/", icon: LayoutDashboard },
+    { label: "Orders", href: "/orders", icon: Box },
+    { label: "Tracking", href: "/track", icon: Map },
   ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 duration-200">
+          <Link
+            href="/"
+            className="flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 duration-200"
+          >
             <div className="rounded-xl flex items-center justify-center bg-primary/10 p-2 text-primary shadow-inner">
               <Package className="h-6 w-6" />
             </div>
@@ -65,16 +72,19 @@ export function Header() {
 
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname?.startsWith(item.href));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                    ${isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
+ ${
+   isActive
+     ? "bg-primary/10 text-primary"
+     : "text-muted-foreground hover:bg-muted hover:text-foreground"
+ }`}
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}

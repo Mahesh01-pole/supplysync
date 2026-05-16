@@ -5,6 +5,14 @@ import { authenticateToken } from '../middleware/auth';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Helper: resolve supplierId from JWT claim OR by looking up user's supplier in DB
+async function resolveSupplierIdForUser(user: any): Promise<string | null> {
+  if (user.supplierId) return user.supplierId;
+  if (user.role !== 'SUPPLIER' && user.role !== 'ADMIN') return null;
+  const supplier = await prisma.supplier.findFirst({ where: { user_id: user.id }, select: { id: true } });
+  return supplier?.id ?? null;
+}
+
 // GET /api/suppliers - List all suppliers
 router.get('/', async (req, res) => {
   try {
@@ -50,61 +58,57 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/requests', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const supplierId = (req as any).user.supplierId;
+    const user = (req as any).user;
+
+    // Resolve supplierId from JWT or DB fallback
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
 
     // Verify supplier owns these requests
-    if (supplierId !== id && (req as any).user.role !== 'ADMIN') {
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // Get supplier's inventory products
-    const supplierInventory = await prisma.inventory.findMany({
-      where: { supplier_id: id },
-      select: { product_id: true },
-    });
-
-    const productIds = supplierInventory.map(inv => inv.product_id);
-
-    // Get pending orders for products this supplier has
+    // Get all orders matched to this supplier that are awaiting dispatch
     const requests = await prisma.order.findMany({
       where: {
-        product_id: { in: productIds },
-        status: 'PENDING',
-        matched_supplier_id: null,
+        matched_supplier_id: id,
+        status: 'MATCHED', // Orders matched to this supplier but not yet dispatched
       },
       include: {
         product: true,
         buyer: { select: { id: true, name: true } },
-        supplier: true,
+        matched_supplier: true,
       },
       orderBy: { urgency: 'asc' }, // P1 first
     });
 
-    // Calculate match scores and distances for each request
+    // Get supplier location for distance calculation
     const supplier = await prisma.supplier.findUnique({
       where: { id },
       select: { latitude: true, longitude: true, rating: true },
     });
 
     const requestsWithScores = requests.map(req => {
-      const distance = calculateDistance(
-        supplier!.latitude,
-        supplier!.longitude,
-        req.buyer.address ? 19.0760 : 19.0760, // Use buyer's coordinates if available
-        req.buyer.address ? 72.8777 : 72.8777
-      );
+      const distance = supplier?.latitude && supplier?.longitude
+        ? calculateDistance(
+            supplier.latitude,
+            supplier.longitude,
+            req.delivery_lat ?? 19.0760,
+            req.delivery_lng ?? 72.8777
+          )
+        : 0;
 
       const score = calculateMatchScore(
         distance,
-        supplier!.rating,
+        Number(supplier?.rating ?? 4),
         req.urgency
       );
 
       return {
         ...req,
-        distance: distance.toFixed(1),
+        distance: `${distance.toFixed(1)} km`,
         score: Math.min(100, Math.round(score * 100)),
-        price: 1450, // Default price, should come from inventory
+        price: req.quantity * 1450,
       };
     });
 
@@ -119,9 +123,10 @@ router.get('/:id/requests', authenticateToken, async (req, res) => {
 router.get('/:id/active-deliveries', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const supplierId = (req as any).user.supplierId;
+    const user = (req as any).user;
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
 
-    if (supplierId !== id && (req as any).user.role !== 'ADMIN') {
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -149,9 +154,10 @@ router.get('/:id/active-deliveries', authenticateToken, async (req, res) => {
 router.get('/:id/history', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const supplierId = (req as any).user.supplierId;
+    const user = (req as any).user;
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
 
-    if (supplierId !== id && (req as any).user.role !== 'ADMIN') {
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -163,9 +169,9 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
       include: {
         product: true,
         buyer: { select: { id: true, name: true } },
-        supplier: { select: { rating: true } },
+        matched_supplier: { select: { rating: true } },
       },
-      orderBy: { updated_at: 'desc' },
+      orderBy: { delivered_at: 'desc' },
     });
 
     // Calculate earnings for each order
@@ -183,7 +189,7 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
 
         return {
           ...order,
-          earnings: order.quantity * (inventory?.price_per_unit || 1450),
+          earnings: order.quantity * Number(inventory?.price_per_unit || 1450),
           fulfillmentTime: order.estimated_delivery_minutes,
         };
       })
@@ -200,9 +206,10 @@ router.get('/:id/history', authenticateToken, async (req, res) => {
 router.get('/:id/inventory', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const supplierId = (req as any).user.supplierId;
+    const user = (req as any).user;
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
 
-    if (supplierId !== id && (req as any).user.role !== 'ADMIN') {
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -220,15 +227,65 @@ router.get('/:id/inventory', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH /api/suppliers/:id/inventory/:productId - Update inventory quantity
+// POST /api/suppliers/:id/inventory - Add a NEW product to supplier inventory
+router.post('/:id/inventory', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { product_id, quantity, price_per_unit } = req.body;
+    const user = (req as any).user;
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
+
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (!product_id || quantity === undefined || price_per_unit === undefined) {
+      return res.status(400).json({ error: 'product_id, quantity, and price_per_unit are required' });
+    }
+
+    // Check if already exists
+    const existing = await prisma.inventory.findUnique({
+      where: { supplier_id_product_id: { supplier_id: id, product_id } },
+    });
+    if (existing) {
+      return res.status(409).json({ error: 'Product already in inventory. Use the edit (pencil) button to update it.' });
+    }
+
+    const item = await prisma.inventory.create({
+      data: {
+        supplier_id: id,
+        product_id,
+        quantity: parseInt(quantity),
+        price_per_unit: parseFloat(price_per_unit),
+      },
+      include: { product: true },
+    });
+
+    res.status(201).json(item);
+  } catch (error) {
+    console.error('Add inventory error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/suppliers/:id/inventory/:productId - Update inventory quantity and/or price
 router.patch('/:id/inventory/:productId', authenticateToken, async (req, res) => {
   try {
     const { id, productId } = req.params;
-    const { quantity } = req.body;
-    const supplierId = (req as any).user.supplierId;
+    const { quantity, price_per_unit } = req.body;
+    const user = (req as any).user;
+    const resolvedSupplierId = await resolveSupplierIdForUser(user);
 
-    if (supplierId !== id && (req as any).user.role !== 'ADMIN') {
+    if (resolvedSupplierId !== id && user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const updateData: any = {};
+    if (quantity !== undefined) updateData.quantity = parseInt(quantity);
+    if (price_per_unit !== undefined) updateData.price_per_unit = parseFloat(price_per_unit);
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Nothing to update. Provide quantity or price_per_unit.' });
     }
 
     const inventory = await prisma.inventory.update({
@@ -238,12 +295,8 @@ router.patch('/:id/inventory/:productId', authenticateToken, async (req, res) =>
           product_id: productId,
         },
       },
-      data: {
-        quantity: parseInt(quantity),
-      },
-      include: {
-        product: true,
-      },
+      data: updateData,
+      include: { product: true },
     });
 
     res.json(inventory);

@@ -9,18 +9,12 @@ export function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = () => {
-    Cookies.remove("auth_token");
-    Cookies.remove("auth_role");
-    Cookies.remove("auth_name");
-    toast.success("Signed out successfully.", {
-      style: {
-        background: "#0f172a",
-        color: "#f8fafc",
-        border: "1px solid rgba(239,68,68,0.3)",
-        borderRadius: "12px",
-      },
-      iconTheme: { primary: "#ef4444", secondary: "#fff" },
-    });
+    Cookies.remove("token");
+    Cookies.remove("userId");
+    Cookies.remove("userName");
+    Cookies.remove("userRole");
+    Cookies.remove("supplierId");
+    toast.success("Signed out successfully.");
     router.push("/login");
   };
 

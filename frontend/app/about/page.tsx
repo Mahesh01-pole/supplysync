@@ -1,23 +1,44 @@
-import Link from 'next/link';
-import { Package, Users, Globe, Zap, Shield, TrendingUp } from 'lucide-react';
+import Link from "next/link";
+import { Package, Users, Globe, Zap, Shield, TrendingUp } from "lucide-react";
 
 export const metadata = {
-  title: 'About Us | SupplySync',
-  description: 'Learn about SupplySync — the team building the future of intelligent B2B supply chain management.',
+  title: "About Us | SupplySync",
+  description:
+    "Learn about SupplySync — the team building the future of intelligent B2B supply chain management.",
 };
 
 const stats = [
-  { label: 'Enterprise Clients', value: '500+' },
-  { label: 'Orders Processed Daily', value: '1M+' },
-  { label: 'Countries Served', value: '42' },
-  { label: 'Uptime SLA', value: '99.9%' },
+  { label: "Enterprise Clients", value: "500+" },
+  { label: "Orders Processed Daily", value: "1M+" },
+  { label: "Countries Served", value: "42" },
+  { label: "Uptime SLA", value: "99.9%" },
 ];
 
 const values = [
-  { icon: Zap, title: 'Speed & Efficiency', description: 'We obsess over milliseconds so your supply chain never skips a beat.' },
-  { icon: Shield, title: 'Security First', description: 'Enterprise-grade encryption and compliance baked in from day one.' },
-  { icon: Globe, title: 'Global Reach', description: 'Seamless cross-border logistics with real-time currency and regulation support.' },
-  { icon: TrendingUp, title: 'Data-Driven', description: 'Predictive analytics that turn historical patterns into actionable insights.' },
+  {
+    icon: Zap,
+    title: "Speed & Efficiency",
+    description:
+      "We obsess over milliseconds so your supply chain never skips a beat.",
+  },
+  {
+    icon: Shield,
+    title: "Security First",
+    description:
+      "Enterprise-grade encryption and compliance baked in from day one.",
+  },
+  {
+    icon: Globe,
+    title: "Global Reach",
+    description:
+      "Seamless cross-border logistics with real-time currency and regulation support.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Data-Driven",
+    description:
+      "Predictive analytics that turn historical patterns into actionable insights.",
+  },
 ];
 
 export default function AboutPage() {
@@ -32,13 +53,16 @@ export default function AboutPage() {
             About SupplySync
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            Reimagining the{' '}
+            Reimagining the{" "}
             <span className="bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
               supply chain
             </span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            SupplySync was founded in 2021 with a single mission: make B2B supply chain management as intelligent and effortless as possible for every business — from fast-growing startups to Fortune 500 enterprises.
+            SupplySync was founded in 2021 with a single mission: make B2B
+            supply chain management as intelligent and effortless as possible
+            for every business — from fast-growing startups to Fortune 500
+            enterprises.
           </p>
         </div>
       </section>
@@ -48,7 +72,9 @@ export default function AboutPage() {
         <div className="container grid grid-cols-2 gap-8 md:grid-cols-4 px-4">
           {stats.map((s) => (
             <div key={s.label} className="text-center space-y-1">
-              <p className="text-4xl font-bold bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">{s.value}</p>
+              <p className="text-4xl font-bold bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
+                {s.value}
+              </p>
               <p className="text-sm text-muted-foreground">{s.label}</p>
             </div>
           ))}
@@ -60,9 +86,11 @@ export default function AboutPage() {
         <div className="container max-w-4xl mx-auto px-4 space-y-6 text-center">
           <h2 className="text-3xl font-bold tracking-tight">Our Mission</h2>
           <p className="text-muted-foreground leading-relaxed text-base md:text-lg">
-            We believe the backbone of global commerce — supply chains — should be intelligent, transparent, and accessible. 
-            By combining real-time data, AI-driven allocation algorithms, and optimized routing, SupplySync empowers procurement 
-            teams and suppliers to collaborate with unprecedented efficiency.
+            We believe the backbone of global commerce — supply chains — should
+            be intelligent, transparent, and accessible. By combining real-time
+            data, AI-driven allocation algorithms, and optimized routing,
+            SupplySync empowers procurement teams and suppliers to collaborate
+            with unprecedented efficiency.
           </p>
         </div>
       </section>
@@ -70,15 +98,22 @@ export default function AboutPage() {
       {/* Values */}
       <section className="bg-muted/30 py-20 border-y border-border/40">
         <div className="container px-4">
-          <h2 className="text-3xl font-bold tracking-tight text-center mb-12">What We Stand For</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-center mb-12">
+            What We Stand For
+          </h2>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {values.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="rounded-2xl border border-border/60 bg-background p-6 space-y-4 hover:shadow-lg hover:border-primary/30 transition-all duration-300">
+              <div
+                key={title}
+                className="rounded-2xl border border-border/60 bg-background p-6 space-y-4 hover:shadow-lg hover:border-primary/30 transition-all duration-300"
+              >
                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                   <Icon className="h-5 w-5" />
                 </div>
                 <h3 className="font-semibold text-foreground">{title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {description}
+                </p>
               </div>
             ))}
           </div>
@@ -95,7 +130,10 @@ export default function AboutPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Join Our Team</h2>
           <p className="text-muted-foreground leading-relaxed">
-            We&apos;re a remote-first team of engineers, designers, and supply-chain experts spread across 15 countries. If you&apos;re passionate about solving hard logistics problems at scale, we&apos;d love to hear from you.
+            We&apos;re a remote-first team of engineers, designers, and
+            supply-chain experts spread across 15 countries. If you&apos;re
+            passionate about solving hard logistics problems at scale, we&apos;d
+            love to hear from you.
           </p>
           <Link
             href="#"

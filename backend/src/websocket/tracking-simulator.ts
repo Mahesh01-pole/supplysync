@@ -26,13 +26,21 @@ async function initializeSimulations() {
   try {
     const inTransitOrders = await prisma.order.findMany({
       where: { status: 'IN_TRANSIT' },
-      include: { tracking: true, supplier: true },
+      select: {
+        id: true,
+        delivery_lat: true,
+        delivery_lng: true,
+        estimated_delivery_minutes: true,
+        urgency: true,
+        tracking: { select: { rider_lat: true, rider_lng: true } },
+        matched_supplier: { select: { latitude: true, longitude: true } },
+      },
     });
 
     activeSimulations = inTransitOrders.map(order => {
       const tracking = order.tracking;
-      const startLat = tracking?.rider_lat || order.supplier?.latitude || 19.0760;
-      const startLng = tracking?.rider_lng || order.supplier?.longitude || 72.8777;
+      const startLat = tracking?.rider_lat || order.matched_supplier?.latitude || 19.0760;
+      const startLng = tracking?.rider_lng || order.matched_supplier?.longitude || 72.8777;
 
       return {
         orderId: order.id,
@@ -91,7 +99,14 @@ export function simulateTracking(onUpdate: (update: LocationUpdate) => void) {
         });
 
         // Keep only if not delivered
-        return status === 'IN_TRANSIT';
+        if (status === 'DELIVERED') {
+          prisma.order.update({
+            where: { id: sim.orderId },
+            data: { status: 'DELIVERED', delivered_at: new Date() }
+          }).catch(console.error);
+          return false;
+        }
+        return true;
       });
     }, 5000); // 5 second interval
 
@@ -108,14 +123,22 @@ export async function addOrderToSimulation(orderId: string) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { tracking: true, supplier: true },
+      select: {
+        id: true,
+        delivery_lat: true,
+        delivery_lng: true,
+        estimated_delivery_minutes: true,
+        urgency: true,
+        tracking: { select: { rider_lat: true, rider_lng: true } },
+        matched_supplier: { select: { latitude: true, longitude: true } },
+      },
     });
 
     if (!order) return;
 
     const tracking = order.tracking;
-    const startLat = tracking?.rider_lat || order.supplier?.latitude || 19.0760;
-    const startLng = tracking?.rider_lng || order.supplier?.longitude || 72.8777;
+    const startLat = tracking?.rider_lat || order.matched_supplier?.latitude || 19.0760;
+    const startLng = tracking?.rider_lng || order.matched_supplier?.longitude || 72.8777;
 
     activeSimulations.push({
       orderId: order.id,
